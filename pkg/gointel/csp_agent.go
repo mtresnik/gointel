@@ -58,7 +58,7 @@ func (C *CSPAgent[VAR, DOMAIN]) GenerateSolutionChannel() chan map[VAR]DOMAIN {
 			if IsLocallyConsistent(current.Variable, currentMap, C.GetLocalConstraints(), C.GetGlobalConstraints()) {
 				if len(currentMap) == len(C.SortedVariables) {
 					if IsConsistent(current.Variable, currentMap, C.GetLocalConstraints(), C.GetGlobalConstraints()) {
-						ch <- current.Map
+						ch <- currentMap
 					}
 					continue
 				} else {
@@ -75,12 +75,7 @@ func (C *CSPAgent[VAR, DOMAIN]) GenerateSolutionChannel() chan map[VAR]DOMAIN {
 						continue
 					}
 					for _, domain := range nextDomain {
-						C.Stack = append(C.Stack, CSPNode[VAR, DOMAIN]{
-							Variable: nextVariable,
-							Domain:   domain,
-							Map:      currentMap,
-							Parent:   &current,
-						})
+						C.Stack = append(C.Stack, *NewCSPNode(nextVariable, domain, &current))
 					}
 				}
 			}
@@ -106,8 +101,13 @@ func (C *CSPAgent[VAR, DOMAIN]) FindAllSolutions() []map[VAR]DOMAIN {
 }
 
 func (C *CSPAgent[VAR, DOMAIN]) FindOneSolution() map[VAR]DOMAIN {
-	solution := <-C.GenerateSolutionChannel()
-	return solution
+	for solution := range C.GenerateSolutionChannel() {
+		if solution != nil {
+			// Early escape
+			return solution
+		}
+	}
+	return nil
 }
 
 func (C *CSPAgent[VAR, DOMAIN]) GetDomainMap() map[VAR][]DOMAIN {

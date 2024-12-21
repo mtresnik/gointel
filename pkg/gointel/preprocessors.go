@@ -1,7 +1,6 @@
 package gointel
 
 import (
-	"fmt"
 	"github.com/mtresnik/goutils/pkg/goutils"
 )
 
@@ -86,7 +85,7 @@ func (A *AC3Preprocessor[VAR, DOMAIN]) Preprocess(cspPtr *CSP[VAR, DOMAIN]) {
 			x, y := constraint.GetVariables()[0], constraint.GetVariables()[1]
 			shared := getSharedConstraints(x, y, binaryConstraints)
 			if arcReduce(x, y, shared, currentDomain) && len(currentDomain) == 0 {
-				panic(fmt.Sprintf("variable %s has an empty domain", x))
+				panic("variable has an empty domain!")
 			}
 		}
 		if len(workQueue) == 0 {

@@ -46,19 +46,13 @@ type GlobalAllDifferentConstraint[VAR comparable, DOMAIN comparable] struct {
 
 func (g *GlobalAllDifferentConstraint[VAR, DOMAIN]) IsSatisfied(assignment map[VAR]DOMAIN) bool {
 	values := []DOMAIN{}
-	keys := []VAR{}
-	for key, value := range assignment {
+	keys := goutils.Keys(assignment)
+	for _, value := range assignment {
 		valueIndex := goutils.IndexOf(values, func(domain DOMAIN) bool {
 			return domain == value
 		})
 		if valueIndex == -1 {
 			values = append(values, value)
-		}
-		keyIndex := goutils.IndexOf(keys, func(key2 VAR) bool {
-			return key2 == key
-		})
-		if keyIndex != -1 {
-			keys = append(keys, key)
 		}
 	}
 	return len(keys) == len(values)
