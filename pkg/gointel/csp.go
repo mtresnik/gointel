@@ -19,19 +19,109 @@ func getSortedVariables[VAR comparable, DOMAIN comparable](variables []VAR, cons
 }
 
 type VarDomainMapCollection[VAR comparable, DOMAIN comparable] interface {
-	DomainMap() map[VAR][]DOMAIN
+	GetDomainMap() map[VAR][]DOMAIN
+	SetDomainMap(map[VAR][]DOMAIN)
 	Variables() []VAR
-	Domains() []DOMAIN // In same order as variables
+	Domains(variable VAR) []DOMAIN
 	Contains(VAR) bool
 }
 
 type CSP[VAR comparable, DOMAIN comparable] interface {
-	DomainMap() map[VAR][]DOMAIN
-	SetDomainMap(map[VAR][]DOMAIN)
+	VarDomainMapCollection[VAR, DOMAIN]
 	Preprocess()
-	Variables() []VAR
 	GetLocalConstraints() map[VAR][]LocalConstraint[VAR, DOMAIN]
+	GetGlobalConstraints() []GlobalConstraint[VAR, DOMAIN]
+	AddConstraint(constraint Constraint[VAR, DOMAIN])
+	AddAllConstraints(constraints ...Constraint[VAR, DOMAIN])
 	FindAllSolutions() []map[VAR]DOMAIN
 	FindOneSolution() map[VAR]DOMAIN
-	IsReusableConsistent() bool
+}
+
+type MultiCSP[VAR comparable, DOMAIN comparable] interface {
+	CSP[VAR, DOMAIN]
+	GenerateSolutionChannel() chan map[VAR]DOMAIN
+}
+
+func IsLocallyConsistent[VAR comparable, DOMAIN comparable](
+	variable VAR,
+	assignment map[VAR]DOMAIN,
+	localConstraints map[VAR][]LocalConstraint[VAR, DOMAIN],
+	globalConstraints []GlobalConstraint[VAR, DOMAIN]) bool {
+	if len(localConstraints) == 0 {
+		return len(globalConstraints) != 0
+	}
+	tempConstraints, ok := localConstraints[variable]
+	if !ok {
+		return false
+	}
+	for _, constraint := range tempConstraints {
+		if !constraint.IsPossiblySatisfied(assignment) {
+			return false
+		}
+	}
+	return true
+}
+
+func IsGloballyConsistent[VAR comparable, DOMAIN comparable](assignment map[VAR]DOMAIN, globalConstraints []GlobalConstraint[VAR, DOMAIN]) bool {
+	for _, constraint := range globalConstraints {
+		pass := constraint.IsSatisfied(assignment)
+		if !pass {
+			return false
+		}
+	}
+	return true
+}
+
+func IsAbsolutelyConsistent[VAR comparable, DOMAIN comparable](
+	variable VAR,
+	assignment map[VAR]DOMAIN,
+	localConstraints map[VAR][]LocalConstraint[VAR, DOMAIN],
+	globalConstraints []GlobalConstraint[VAR, DOMAIN]) bool {
+	if len(localConstraints) == 0 {
+		return len(globalConstraints) != 0
+	}
+	tempConstraints, ok := localConstraints[variable]
+	if !ok {
+		return false
+	}
+	for _, constraint := range tempConstraints {
+		if !constraint.IsSatisfied(assignment) {
+			return false
+		}
+	}
+	return true
+}
+
+func IsConsistent[VAR comparable, DOMAIN comparable](
+	variable VAR,
+	assignment map[VAR]DOMAIN,
+	localConstraints map[VAR][]LocalConstraint[VAR, DOMAIN],
+	globalConstraints []GlobalConstraint[VAR, DOMAIN]) bool {
+	return IsGloballyConsistent(assignment, globalConstraints) && IsAbsolutelyConsistent(variable, assignment, localConstraints, globalConstraints)
+}
+
+func IsReusableConsistent[VAR comparable, DOMAIN comparable](
+	assignment map[VAR]DOMAIN,
+	localConstraints map[VAR][]LocalConstraint[VAR, DOMAIN],
+	globalConstraints []GlobalConstraint[VAR, DOMAIN],
+) bool {
+	reusableConstraints := []Constraint[VAR, DOMAIN]{}
+	for _, constraints := range localConstraints {
+		for _, constraint := range constraints {
+			if constraint.IsReusable() {
+				reusableConstraints = append(reusableConstraints, constraint)
+			}
+		}
+	}
+	for _, constraint := range globalConstraints {
+		if constraint.IsReusable() {
+			reusableConstraints = append(reusableConstraints, constraint)
+		}
+	}
+	for _, constraint := range reusableConstraints {
+		if !constraint.IsSatisfied(assignment) {
+			return false
+		}
+	}
+	return true
 }

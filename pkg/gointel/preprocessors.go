@@ -16,7 +16,6 @@ type AC3Preprocessor[VAR comparable, DOMAIN comparable] struct {
 func CloneMapWithSlices[K comparable, V any](original map[K][]V) map[K][]V {
 	cloned := make(map[K][]V, len(original))
 	for key, value := range original {
-		// Create a new slice for each value and copy the contents
 		newSlice := make([]V, len(value))
 		copy(newSlice, value)
 		cloned[key] = newSlice
@@ -38,7 +37,7 @@ func (A *AC3Preprocessor[VAR, DOMAIN]) Preprocess(cspPtr *CSP[VAR, DOMAIN]) {
 		return
 	}
 	csp := *cspPtr
-	originalDomain := CloneMapWithSlices(csp.DomainMap())
+	originalDomain := CloneMapWithSlices(csp.GetDomainMap())
 	originalConstraints := csp.GetLocalConstraints()
 	variables := csp.Variables()
 

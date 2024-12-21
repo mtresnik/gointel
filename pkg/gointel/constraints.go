@@ -6,24 +6,24 @@ import (
 )
 
 type Constraint[VAR comparable, DOMAIN comparable] interface {
-	IsSatisfied(map[VAR]DOMAIN) bool
-	IsLocal() bool
+	IsSatisfied(assignment map[VAR]DOMAIN) bool
+	AsLocal() *LocalConstraint[VAR, DOMAIN]
 	IsReusable() bool
 }
 
 type HeuristicConstraint[VAR comparable, DOMAIN comparable] interface {
-	Evaluate(map[VAR]DOMAIN) float64
 	Constraint[VAR, DOMAIN]
+	Evaluate(assignment map[VAR]DOMAIN) float64
 }
 
 type LocalConstraint[VAR comparable, DOMAIN comparable] interface {
-	IsPossiblySatisfied(map[VAR]DOMAIN) bool
-	GetVariables() []VAR
 	Constraint[VAR, DOMAIN]
+	IsPossiblySatisfied(assignment map[VAR]DOMAIN) bool
+	GetVariables() []VAR
 }
 
 type LocalHeuristicConstraint[VAR comparable, DOMAIN comparable] interface {
-	Evaluate(map[VAR]DOMAIN) float64
+	Evaluate(assignment map[VAR]DOMAIN) float64
 	LocalConstraint[VAR, DOMAIN]
 }
 
@@ -39,9 +39,7 @@ func IsTernary[VAR comparable, DOMAIN comparable](constraint LocalConstraint[VAR
 	return len(constraint.GetVariables()) == 3
 }
 
-type GlobalConstraint[VAR comparable, DOMAIN comparable] interface {
-	Constraint[VAR, DOMAIN]
-}
+type GlobalConstraint[VAR comparable, DOMAIN comparable] Constraint[VAR, DOMAIN]
 
 type GlobalAllDifferentConstraint[VAR comparable, DOMAIN comparable] struct {
 }
@@ -66,8 +64,8 @@ func (g *GlobalAllDifferentConstraint[VAR, DOMAIN]) IsSatisfied(assignment map[V
 	return len(keys) == len(values)
 }
 
-func (g *GlobalAllDifferentConstraint[VAR, DOMAIN]) IsLocal() bool {
-	return false
+func (g *GlobalAllDifferentConstraint[VAR, DOMAIN]) AsLocal() *LocalConstraint[VAR, DOMAIN] {
+	return nil
 }
 
 func (g *GlobalAllDifferentConstraint[VAR, DOMAIN]) IsReusable() bool {
@@ -102,8 +100,9 @@ func (l *LocalAllDifferentConstraint[VAR, DOMAIN]) GetVariables() []VAR {
 	return l.Variables
 }
 
-func (l *LocalAllDifferentConstraint[VAR, DOMAIN]) IsLocal() bool {
-	return true
+func (l *LocalAllDifferentConstraint[VAR, DOMAIN]) AsLocal() *LocalConstraint[VAR, DOMAIN] {
+	var localConstraint LocalConstraint[VAR, DOMAIN] = l
+	return &localConstraint
 }
 
 func (l *LocalAllDifferentConstraint[VAR, DOMAIN]) IsSatisfied(assignment map[VAR]DOMAIN) bool {
@@ -164,8 +163,9 @@ func (c *CardinalityConstraint[VAR, DOMAIN]) IsSatisfied(assignment map[VAR]DOMA
 	return c.IsPossiblySatisfied(assignment)
 }
 
-func (c *CardinalityConstraint[VAR, DOMAIN]) IsLocal() bool {
-	return true
+func (c *CardinalityConstraint[VAR, DOMAIN]) AsLocal() *LocalConstraint[VAR, DOMAIN] {
+	var localConstraint LocalConstraint[VAR, DOMAIN] = c
+	return &localConstraint
 }
 
 func (c *CardinalityConstraint[VAR, DOMAIN]) IsReusable() bool {
@@ -193,8 +193,9 @@ func (m *MinimumHeuristicConstraint[VAR, DOMAIN]) GetVariables() []VAR {
 	return m.Variables
 }
 
-func (*MinimumHeuristicConstraint[VAR, DOMAIN]) IsLocal() bool {
-	return true
+func (m *MinimumHeuristicConstraint[VAR, DOMAIN]) AsLocal() *LocalConstraint[VAR, DOMAIN] {
+	var localConstraint LocalConstraint[VAR, DOMAIN] = m
+	return &localConstraint
 }
 
 func (m *MinimumHeuristicConstraint[VAR, DOMAIN]) IsReusable() bool {
