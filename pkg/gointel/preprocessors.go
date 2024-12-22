@@ -60,14 +60,9 @@ func (A *AC3Preprocessor[VAR, DOMAIN]) Preprocess(cspPtr *CSP[VAR, DOMAIN]) {
 	// Find all domains that work for the unary constraints
 	for _, variable := range variables {
 		currentDomain[variable] = goutils.Filter(originalDomain[variable], func(domain DOMAIN) bool {
-			all := true
-			for _, constraint := range unaryConstraints[variable] {
-				if !constraint.IsPossiblySatisfied(map[VAR]DOMAIN{variable: domain}) {
-					all = false
-					break
-				}
-			}
-			return all
+			return goutils.All(unaryConstraints[variable], func(constraint LocalConstraint[VAR, DOMAIN]) bool {
+				return constraint.IsPossiblySatisfied(map[VAR]DOMAIN{variable: domain})
+			})
 		})
 	}
 
@@ -106,14 +101,9 @@ func arcReduce[VAR comparable, DOMAIN comparable](x VAR, y VAR, binaryConstraint
 		vx := currentDomainX[index]
 		vyIndex := -1
 		vyIndex = goutils.IndexOf(currentDomainY, func(yDomain DOMAIN) bool {
-			all := true
-			for _, constraint := range binaryConstraints {
-				if !constraint.IsPossiblySatisfied(map[VAR]DOMAIN{x: vx, y: yDomain}) {
-					all = false
-					break
-				}
-			}
-			return all
+			return goutils.All(binaryConstraints, func(constraint LocalConstraint[VAR, DOMAIN]) bool {
+				return constraint.IsPossiblySatisfied(map[VAR]DOMAIN{x: vx, y: yDomain})
+			})
 		})
 		if vyIndex == -1 {
 			currentDomainX = append(currentDomainX[:index], currentDomainX[index+1:]...)
