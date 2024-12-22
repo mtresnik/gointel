@@ -21,8 +21,8 @@ func getSortedVariables[VAR comparable, DOMAIN comparable](variables []VAR, cons
 type VarDomainMapCollection[VAR comparable, DOMAIN comparable] interface {
 	GetDomainMap() map[VAR][]DOMAIN
 	SetDomainMap(map[VAR][]DOMAIN)
-	Variables() []VAR
-	Domains(variable VAR) []DOMAIN
+	GetVariables() []VAR
+	GetDomainForVariable(variable VAR) []DOMAIN
 	Contains(VAR) bool
 }
 

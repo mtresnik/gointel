@@ -12,9 +12,11 @@ type CSPAgent[VAR comparable, DOMAIN comparable] struct {
 
 func NewCSPAgent[VAR comparable, DOMAIN comparable](domainMap map[VAR][]DOMAIN, sortedVariables []VAR, stack []CSPNode[VAR, DOMAIN]) *CSPAgent[VAR, DOMAIN] {
 	return &CSPAgent[VAR, DOMAIN]{
-		SortedVariables: sortedVariables,
-		DomainMap:       domainMap,
-		Stack:           stack,
+		SortedVariables:   sortedVariables,
+		DomainMap:         domainMap,
+		Stack:             stack,
+		localConstraints:  map[VAR][]LocalConstraint[VAR, DOMAIN]{},
+		globalConstraints: []GlobalConstraint[VAR, DOMAIN]{},
 	}
 }
 
@@ -118,11 +120,11 @@ func (C *CSPAgent[VAR, DOMAIN]) SetDomainMap(m map[VAR][]DOMAIN) {
 	C.DomainMap = m
 }
 
-func (C *CSPAgent[VAR, DOMAIN]) Variables() []VAR {
+func (C *CSPAgent[VAR, DOMAIN]) GetVariables() []VAR {
 	return C.SortedVariables
 }
 
-func (C *CSPAgent[VAR, DOMAIN]) Domains(variable VAR) []DOMAIN {
+func (C *CSPAgent[VAR, DOMAIN]) GetDomainForVariable(variable VAR) []DOMAIN {
 	return C.DomainMap[variable]
 }
 

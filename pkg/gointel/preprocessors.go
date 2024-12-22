@@ -38,7 +38,7 @@ func (A *AC3Preprocessor[VAR, DOMAIN]) Preprocess(cspPtr *CSP[VAR, DOMAIN]) {
 	csp := *cspPtr
 	originalDomain := CloneMapWithSlices(csp.GetDomainMap())
 	originalConstraints := csp.GetLocalConstraints()
-	variables := csp.Variables()
+	variables := csp.GetVariables()
 
 	unaryConstraints := map[VAR][]LocalConstraint[VAR, DOMAIN]{}
 	binaryConstraints := map[VAR][]LocalConstraint[VAR, DOMAIN]{}

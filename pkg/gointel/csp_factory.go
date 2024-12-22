@@ -37,10 +37,9 @@ func DefaultCSPFactory[VAR comparable, DOMAIN comparable](request CSPFactoryRequ
 		}
 	}
 	if maxDomainInt > numVariables {
-		// CSPDomainAsync
-		panic("implement me")
+		var ret CSP[VAR, DOMAIN] = NewCSPDomain(request.DomainMap)
+		return &ret
 	}
-	// CSPTree
 	var ret CSP[VAR, DOMAIN] = NewCSPTree(request.DomainMap)
 	return &ret
 }

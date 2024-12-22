@@ -24,11 +24,11 @@ func (C *CSPTree[VAR, DOMAIN]) SetDomainMap(m map[VAR][]DOMAIN) {
 	C.DomainMap = m
 }
 
-func (C *CSPTree[VAR, DOMAIN]) Variables() []VAR {
+func (C *CSPTree[VAR, DOMAIN]) GetVariables() []VAR {
 	return goutils.Keys(C.DomainMap)
 }
 
-func (C *CSPTree[VAR, DOMAIN]) Domains(variable VAR) []DOMAIN {
+func (C *CSPTree[VAR, DOMAIN]) GetDomainForVariable(variable VAR) []DOMAIN {
 	ret, ok := C.DomainMap[variable]
 	if !ok {
 		return []DOMAIN{}
@@ -60,7 +60,7 @@ func (C *CSPTree[VAR, DOMAIN]) AddConstraint(constraint Constraint[VAR, DOMAIN])
 	local := constraint.AsLocal()
 	if local != nil {
 		for _, variable := range (*local).GetVariables() {
-			variableIndex := goutils.IndexOf(C.Variables(), func(v VAR) bool {
+			variableIndex := goutils.IndexOf(C.GetVariables(), func(v VAR) bool {
 				return v == variable
 			})
 			if variableIndex != -1 {
@@ -113,7 +113,7 @@ func (C *CSPTree[VAR, DOMAIN]) GenerateSolutionChannel() chan map[VAR]DOMAIN {
 }
 
 func (C *CSPTree[VAR, DOMAIN]) constructAgent() *CSPAgent[VAR, DOMAIN] {
-	variables := C.Variables()
+	variables := C.GetVariables()
 	if len(variables) == 0 {
 		return nil
 	}
