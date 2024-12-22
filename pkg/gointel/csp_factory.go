@@ -41,5 +41,6 @@ func DefaultCSPFactory[VAR comparable, DOMAIN comparable](request CSPFactoryRequ
 		panic("implement me")
 	}
 	// CSPTree
-	panic("implement me")
+	var ret CSP[VAR, DOMAIN] = NewCSPTree(request.DomainMap)
+	return &ret
 }
