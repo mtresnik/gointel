@@ -4,7 +4,7 @@ import (
 	"sort"
 )
 
-const CSP_MAX_THREAD_COUNT = 200
+const CSP_MAX_CHILDREN = 200
 
 func getSortedVariables[VAR comparable, DOMAIN comparable](variables []VAR, constraints map[VAR][]LocalConstraint[VAR, DOMAIN]) []VAR {
 	if len(constraints) == 0 {

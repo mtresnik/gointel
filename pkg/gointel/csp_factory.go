@@ -27,16 +27,7 @@ func DefaultCSPFactory[VAR comparable, DOMAIN comparable](request CSPFactoryRequ
 	}))
 	maxDomain := float64(maxDomainInt)
 	maxChildren := math.Pow(maxDomain, float64(numVariables))
-	if maxChildren > float64(CSP_MAX_THREAD_COUNT) {
-		if request.IsRepeatable || maxChildren > CSP_REPEAT_THRESHOLD {
-			// CSPGoRoutine
-			panic("implement me")
-		} else {
-			// CSPInferredAsync
-			panic("implement me")
-		}
-	}
-	if maxDomainInt > numVariables {
+	if maxChildren > float64(CSP_MAX_CHILDREN) || maxDomainInt > numVariables {
 		var ret CSP[VAR, DOMAIN] = NewCSPDomain(request.DomainMap)
 		return &ret
 	}
