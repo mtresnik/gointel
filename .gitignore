@@ -8,6 +8,10 @@
 *.so
 *.dylib
 
+# Ui elements
+Test*.png
+Test*.gif
+
 # Test binary, built with `go test -c`
 *.test
 

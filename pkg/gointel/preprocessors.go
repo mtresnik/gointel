@@ -71,7 +71,6 @@ func (A *AC3Preprocessor[VAR, DOMAIN]) Preprocess(cspPtr *CSP[VAR, DOMAIN]) {
 	for _, it := range binaryConstraints {
 		workQueue = append(workQueue, it...)
 	}
-	println("WorkQueue size:", len(workQueue))
 
 	for {
 		if len(workQueue) > 0 {
