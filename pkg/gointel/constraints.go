@@ -9,6 +9,7 @@ type Constraint[VAR comparable, DOMAIN comparable] interface {
 	IsSatisfied(assignment map[VAR]DOMAIN) bool
 	AsLocal() *LocalConstraint[VAR, DOMAIN]
 	IsReusable() bool
+	ReduceDomain(variable VAR, assignment map[VAR]DOMAIN, domain []DOMAIN) []DOMAIN
 }
 
 type HeuristicConstraint[VAR comparable, DOMAIN comparable] interface {
@@ -45,17 +46,13 @@ type GlobalAllDifferentConstraint[VAR comparable, DOMAIN comparable] struct {
 }
 
 func (g *GlobalAllDifferentConstraint[VAR, DOMAIN]) IsSatisfied(assignment map[VAR]DOMAIN) bool {
-	values := []DOMAIN{}
-	keys := goutils.Keys(assignment)
-	for _, value := range assignment {
-		valueIndex := goutils.IndexOf(values, func(domain DOMAIN) bool {
-			return domain == value
-		})
-		if valueIndex == -1 {
-			values = append(values, value)
-		}
+	valueSet := map[DOMAIN]bool{}
+	keySet := map[VAR]bool{}
+	for key, value := range assignment {
+		valueSet[value] = true
+		keySet[key] = true
 	}
-	return len(keys) == len(values)
+	return len(keySet) == len(valueSet)
 }
 
 func (g *GlobalAllDifferentConstraint[VAR, DOMAIN]) AsLocal() *LocalConstraint[VAR, DOMAIN] {
@@ -66,32 +63,31 @@ func (g *GlobalAllDifferentConstraint[VAR, DOMAIN]) IsReusable() bool {
 	return false
 }
 
+func (g *GlobalAllDifferentConstraint[VAR, DOMAIN]) ReduceDomain(variable VAR, assignment map[VAR]DOMAIN, domain []DOMAIN) []DOMAIN {
+	return domain
+}
+
 type LocalAllDifferentConstraint[VAR comparable, DOMAIN comparable] struct {
-	Variables []VAR
+	Variables *[]VAR
 }
 
 func (l *LocalAllDifferentConstraint[VAR, DOMAIN]) IsPossiblySatisfied(assignment map[VAR]DOMAIN) bool {
-	values := []DOMAIN{}
-	keys := []VAR{}
-	for key, value := range assignment {
-		valueIndex := goutils.IndexOf(values, func(domain DOMAIN) bool {
-			return domain == value
-		})
-		if valueIndex == -1 {
-			values = append(values, value)
-		}
-		keyIndex := goutils.IndexOf(keys, func(key2 VAR) bool {
-			return key2 == key
-		})
-		if keyIndex != -1 {
-			keys = append(keys, key)
+	variableSet := map[VAR]bool{}
+	domainSet := map[DOMAIN]bool{}
+	for _, variable := range *(l.Variables) {
+		if domain, ok := assignment[variable]; ok {
+			variableSet[variable] = true
+			if goutils.SetContains(domainSet, domain) {
+				return false
+			}
+			domainSet[domain] = true
 		}
 	}
-	return len(keys) == len(values)
+	return true
 }
 
 func (l *LocalAllDifferentConstraint[VAR, DOMAIN]) GetVariables() []VAR {
-	return l.Variables
+	return *l.Variables
 }
 
 func (l *LocalAllDifferentConstraint[VAR, DOMAIN]) AsLocal() *LocalConstraint[VAR, DOMAIN] {
@@ -105,6 +101,21 @@ func (l *LocalAllDifferentConstraint[VAR, DOMAIN]) IsSatisfied(assignment map[VA
 
 func (l *LocalAllDifferentConstraint[VAR, DOMAIN]) IsReusable() bool {
 	return false
+}
+
+func (l *LocalAllDifferentConstraint[VAR, DOMAIN]) ReduceDomain(nextVariable VAR, assignment map[VAR]DOMAIN, domain []DOMAIN) []DOMAIN {
+	if len(domain) == 0 {
+		return domain
+	}
+	retDomain := []DOMAIN{}
+	for _, currDomain := range domain {
+		assignment[nextVariable] = currDomain
+		if l.IsPossiblySatisfied(assignment) {
+			retDomain = append(retDomain, currDomain)
+		}
+	}
+	delete(assignment, nextVariable)
+	return retDomain
 }
 
 type SumConstraint[VAR comparable, DOMAIN comparable] interface {
@@ -166,6 +177,10 @@ func (c *CardinalityConstraint[VAR, DOMAIN]) IsReusable() bool {
 	return false
 }
 
+func (c *CardinalityConstraint[VAR, DOMAIN]) ReduceDomain(variable VAR, assignment map[VAR]DOMAIN, domain []DOMAIN) []DOMAIN {
+	return domain
+}
+
 // </editor-fold>
 
 // MinimumHeuristicConstraint <editor-fold>
@@ -211,6 +226,10 @@ func (m *MinimumHeuristicConstraint[VAR, DOMAIN]) IsSatisfied(assignment map[VAR
 		return true
 	}
 	return false
+}
+
+func (m *MinimumHeuristicConstraint[VAR, DOMAIN]) ReduceDomain(variable VAR, assignment map[VAR]DOMAIN, domain []DOMAIN) []DOMAIN {
+	return domain
 }
 
 // </editor-fold>

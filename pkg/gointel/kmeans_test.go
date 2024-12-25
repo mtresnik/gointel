@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func testKMeans_GIF(t *testing.T) {
+func TestKMeans_GIF(t *testing.T) {
 	allPoints := generateAllPoints()
 	boundingBox := gomath.NewBoundingBox(gomath.PointsToSpatial(allPoints...)...)
 
@@ -173,6 +173,7 @@ func (p *LivePointRenderer) Build() {
 		Points:           p.points,
 		DistanceFunction: &distanceFunction,
 		Listeners:        []KMeansUpdateListener{p},
+		NumAttempts:      6,
 	}
 	KMeans(request)
 }

@@ -49,10 +49,10 @@ func (A *AC3Preprocessor[VAR, DOMAIN]) Preprocess(cspPtr *CSP[VAR, DOMAIN]) {
 
 	for variable, constraints := range originalConstraints {
 		for _, constraint := range constraints {
-			if IsUnary(constraint) {
-				unaryConstraints[variable] = append(unaryConstraints[variable], constraint)
-			} else if IsBinary(constraint) {
-				binaryConstraints[variable] = append(binaryConstraints[variable], constraint)
+			if IsUnary(*constraint) {
+				unaryConstraints[variable] = append(unaryConstraints[variable], *constraint)
+			} else if IsBinary(*constraint) {
+				binaryConstraints[variable] = append(binaryConstraints[variable], *constraint)
 			}
 		}
 	}

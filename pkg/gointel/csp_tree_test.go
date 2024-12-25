@@ -17,7 +17,8 @@ func TestCSPTree_FindAllSolutions(t *testing.T) {
 	}
 	csp := NewCSPTree(domainMap)
 	constraint := GlobalAllDifferentConstraint[string, int]{}
-	csp.AddConstraint(&constraint)
+	var c Constraint[string, int] = &constraint
+	csp.AddConstraint(&c)
 	solutions := csp.FindAllSolutions()
 	for _, solution := range solutions {
 		for k, v := range solution {

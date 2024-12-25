@@ -1,6 +1,10 @@
 package gointel
 
-import "github.com/mtresnik/gomath/pkg/gomath"
+import (
+	"github.com/mtresnik/gomath/pkg/gomath"
+	"math"
+	"math/rand"
+)
 
 type KMeansResult []gomath.Point
 
@@ -9,6 +13,7 @@ type KMeansRequest struct {
 	Points           []gomath.Point
 	DistanceFunction *gomath.DistanceFunction
 	Listeners        []KMeansUpdateListener
+	NumAttempts      int
 }
 
 type KMeansUpdateListener interface {
@@ -30,71 +35,154 @@ func NewKMeansRequest(k int, points []gomath.Point, distanceFunction *gomath.Dis
 		Points:           points,
 		DistanceFunction: distanceFunction,
 		Listeners:        listeners,
+		NumAttempts:      k * 2,
 	}
 }
 
-func KMeans(request KMeansRequest) KMeansResult {
-	n := request.K
-	points := request.Points
+func kmeansInit(points []gomath.Point, k int, distFunc gomath.DistanceFunction) []gomath.Point {
+	centroids := make([]gomath.Point, k)
+	centroids[0] = points[rand.Intn(len(points))]
 
-	if n <= 0 || len(points) <= 0 {
-		return nil
-	}
-	centroids := make([]gomath.Point, n)
-	for i := range centroids {
-		centroids[i] = points[i%len(points)]
-	}
-	distanceFunction := gomath.EuclideanDistance
-	if request.DistanceFunction != nil {
-		distanceFunction = *request.DistanceFunction
-	}
-	assignments := make([]int, len(points))
-	for {
-		VisitKMeansUpdateListeners(request.Listeners, centroids)
-		changed := false
+	for i := 1; i < k; i++ {
+		distances := make([]float64, len(points))
+		sum := 0.0
 
-		for i, point := range points {
-			closest := 0
-			minDist := distanceFunction(centroids[0], point)
-			for j, centroid := range centroids {
-				distance := distanceFunction(centroid, point)
-				if distance < minDist {
-					closest = j
-					minDist = distance
+		for j, point := range points {
+			minDist := math.MaxFloat64
+			for c := 0; c < i; c++ {
+				dist := distFunc(centroids[c], point)
+				if dist < minDist {
+					minDist = dist
 				}
 			}
-			if assignments[i] != closest {
-				assignments[i] = closest
-				changed = true
-			}
-		}
-		if !changed {
-			break
+			distances[j] = minDist * minDist
+			sum += distances[j]
 		}
 
-		counts := make([]int, n)
-		newCentroids := make([]gomath.Point, n)
-
-		for i := range newCentroids {
-			newCentroids[i] = *gomath.NewPoint(make([]float64, len(points[0].Values))...)
-		}
-		for i, point := range points {
-			cluster := assignments[i]
-			for j := range point.Values {
-				newCentroids[cluster].Values[j] += point.Values[j]
-			}
-			counts[cluster]++
-		}
-		for i := range newCentroids {
-			if counts[i] == 0 {
-				continue
-			}
-			for j := range newCentroids[i].Values {
-				newCentroids[i].Values[j] /= float64(counts[i])
+		target := rand.Float64() * sum
+		currentSum := 0.0
+		for j, dist := range distances {
+			currentSum += dist
+			if currentSum >= target {
+				centroids[i] = points[j]
+				break
 			}
 		}
-		centroids = newCentroids
-
 	}
 	return centroids
+}
+
+func KMeans(request KMeansRequest) KMeansResult {
+	if request.K <= 0 || len(request.Points) <= 0 {
+		return nil
+	}
+
+	distFunc := gomath.EuclideanDistance
+	if request.DistanceFunction != nil {
+		distFunc = *request.DistanceFunction
+	}
+
+	dimension := len(request.Points[0].Values)
+	bestCentroids := make([]gomath.Point, request.K)
+	for i := range bestCentroids {
+		bestCentroids[i].Values = make([]float64, dimension)
+	}
+
+	bestInertia := math.MaxFloat64
+	assignments := make([]int, len(request.Points))
+
+	for attempt := 0; attempt < 10; attempt++ {
+		VisitKMeansUpdateListeners(request.Listeners, bestCentroids)
+		centroids := make([]gomath.Point, request.K)
+		for i := range centroids {
+			centroids[i].Values = make([]float64, dimension)
+		}
+		centroids[0] = request.Points[rand.Intn(len(request.Points))]
+
+		for i := 1; i < request.K; i++ {
+			maxDist := 0.0
+			nextIdx := 0
+			for j, point := range request.Points {
+				minDist := math.MaxFloat64
+				for k := 0; k < i; k++ {
+					if d := distFunc(centroids[k], point); d < minDist {
+						minDist = d
+					}
+				}
+				if minDist > maxDist {
+					maxDist = minDist
+					nextIdx = j
+				}
+			}
+			centroids[i] = request.Points[nextIdx]
+		}
+
+		inertia := 0.0
+		changed := true
+		counts := make([]int, request.K)
+		sums := make([][]float64, request.K)
+		for i := range sums {
+			sums[i] = make([]float64, dimension)
+		}
+
+		for iter := 0; changed && iter < 100; iter++ {
+			changed = false
+			inertia = 0
+
+			for i, point := range request.Points {
+				closest := 0
+				minDist := distFunc(centroids[0], point)
+
+				for j := 1; j < request.K; j++ {
+					if d := distFunc(centroids[j], point); d < minDist {
+						minDist = d
+						closest = j
+					}
+				}
+
+				if assignments[i] != closest {
+					assignments[i] = closest
+					changed = true
+				}
+				inertia += minDist
+			}
+
+			if !changed {
+				break
+			}
+
+			for i := range counts {
+				counts[i] = 0
+				for j := range sums[i] {
+					sums[i][j] = 0
+				}
+			}
+
+			for i, point := range request.Points {
+				cluster := assignments[i]
+				counts[cluster]++
+				for j, val := range point.Values {
+					sums[cluster][j] += val
+				}
+			}
+
+			for i := range centroids {
+				if counts[i] > 0 {
+					for j := range centroids[i].Values {
+						centroids[i].Values[j] = sums[i][j] / float64(counts[i])
+					}
+				}
+			}
+		}
+
+		if inertia < bestInertia {
+			bestInertia = inertia
+			for i := range centroids {
+				copy(bestCentroids[i].Values, centroids[i].Values)
+			}
+		}
+	}
+
+	VisitKMeansUpdateListeners(request.Listeners, bestCentroids)
+	return bestCentroids
 }

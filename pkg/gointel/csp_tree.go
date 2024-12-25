@@ -5,14 +5,17 @@ import "github.com/mtresnik/goutils/pkg/goutils"
 type CSPTree[VAR comparable, DOMAIN comparable] struct {
 	DomainMap         map[VAR][]DOMAIN
 	Preprocessors     []CSPPreprocessor[VAR, DOMAIN]
-	localConstraints  map[VAR][]LocalConstraint[VAR, DOMAIN]
-	globalConstraints []GlobalConstraint[VAR, DOMAIN]
+	localConstraints  map[VAR][]*LocalConstraint[VAR, DOMAIN]
+	globalConstraints []*GlobalConstraint[VAR, DOMAIN]
+	sortingFunction   *func(a, b VAR) bool
 }
 
 func NewCSPTree[VAR comparable, DOMAIN comparable](domainMap map[VAR][]DOMAIN, preprocessors ...CSPPreprocessor[VAR, DOMAIN]) *CSPTree[VAR, DOMAIN] {
 	return &CSPTree[VAR, DOMAIN]{
-		DomainMap:     domainMap,
-		Preprocessors: preprocessors,
+		DomainMap:         domainMap,
+		Preprocessors:     preprocessors,
+		localConstraints:  map[VAR][]*LocalConstraint[VAR, DOMAIN]{},
+		globalConstraints: []*GlobalConstraint[VAR, DOMAIN]{},
 	}
 }
 
@@ -48,38 +51,42 @@ func (C *CSPTree[VAR, DOMAIN]) Preprocess() {
 	}
 }
 
-func (C *CSPTree[VAR, DOMAIN]) GetLocalConstraints() map[VAR][]LocalConstraint[VAR, DOMAIN] {
+func (C *CSPTree[VAR, DOMAIN]) GetLocalConstraints() map[VAR][]*LocalConstraint[VAR, DOMAIN] {
 	return C.localConstraints
 }
 
-func (C *CSPTree[VAR, DOMAIN]) GetGlobalConstraints() []GlobalConstraint[VAR, DOMAIN] {
+func (C *CSPTree[VAR, DOMAIN]) GetGlobalConstraints() []*GlobalConstraint[VAR, DOMAIN] {
 	return C.globalConstraints
 }
 
-func (C *CSPTree[VAR, DOMAIN]) AddConstraint(constraint Constraint[VAR, DOMAIN]) {
-	local := constraint.AsLocal()
+func (C *CSPTree[VAR, DOMAIN]) AddConstraint(constraint *Constraint[VAR, DOMAIN]) {
+	if constraint == nil {
+		return
+	}
+	local := (*constraint).AsLocal()
 	if local != nil {
 		for _, variable := range (*local).GetVariables() {
 			variableIndex := goutils.IndexOf(C.GetVariables(), func(v VAR) bool {
 				return v == variable
 			})
 			if variableIndex != -1 {
-				constraintLookup := []LocalConstraint[VAR, DOMAIN]{}
+				constraintLookup := []*LocalConstraint[VAR, DOMAIN]{}
 				temp, ok := C.localConstraints[variable]
 				if ok {
 					constraintLookup = temp
 				}
-				constraintLookup = append(constraintLookup, *local)
+				constraintLookup = append(constraintLookup, local)
 				C.localConstraints[variable] = constraintLookup
 			}
 		}
 	} else {
 		println("Adding global constraint:")
-		C.globalConstraints = append(C.globalConstraints, constraint)
+		var global GlobalConstraint[VAR, DOMAIN] = *constraint
+		C.globalConstraints = append(C.globalConstraints, &global)
 	}
 }
 
-func (C *CSPTree[VAR, DOMAIN]) AddAllConstraints(constraints ...Constraint[VAR, DOMAIN]) {
+func (C *CSPTree[VAR, DOMAIN]) AddAllConstraints(constraints ...*Constraint[VAR, DOMAIN]) {
 	for _, constraint := range constraints {
 		C.AddConstraint(constraint)
 	}
@@ -127,23 +134,30 @@ func (C *CSPTree[VAR, DOMAIN]) constructAgent() *CSPAgent[VAR, DOMAIN] {
 	}
 	rootNodes := []CSPNode[VAR, DOMAIN]{}
 	for _, domain := range firstDomain {
-		node := NewCSPNode(first, domain)
+		node := NewCSPNode(first, 0, domain, firstDomain)
 		if node != nil {
 			rootNodes = append(rootNodes, *node)
 		}
 	}
-	ret := NewCSPAgent(C.DomainMap, variables, rootNodes)
+	ret := NewCSPAgent(&C.DomainMap, variables, rootNodes)
+	ret.SortingFunction = C.sortingFunction
 	for _, local := range C.localConstraints {
-		toAdd := []Constraint[VAR, DOMAIN]{}
+		toAdd := []*Constraint[VAR, DOMAIN]{}
 		for _, constraint := range local {
-			toAdd = append(toAdd, constraint)
+			var c Constraint[VAR, DOMAIN] = *constraint
+			toAdd = append(toAdd, &c)
 		}
 		ret.AddAllConstraints(toAdd...)
 	}
-	toAdd := []Constraint[VAR, DOMAIN]{}
+	toAdd := []*Constraint[VAR, DOMAIN]{}
 	for _, constraint := range C.globalConstraints {
-		toAdd = append(toAdd, constraint)
+		var c Constraint[VAR, DOMAIN] = *constraint
+		toAdd = append(toAdd, &c)
 	}
 	ret.AddAllConstraints(toAdd...)
 	return ret
+}
+
+func (C *CSPTree[VAR, DOMAIN]) GetSeeds() *map[VAR]DOMAIN {
+	return nil
 }
