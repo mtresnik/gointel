@@ -16,14 +16,20 @@ type SimulatedAnnealing struct {
 	finalTemp         float64
 	coolingRate       float64
 	iterationsPerTemp int
+	listeners         []SimulatedAnnealingListener
 }
 
-func NewSimulatedAnnealing(initialTemp, finalTemp, coolingRate float64, iterationsPerTemp int) *SimulatedAnnealing {
+type SimulatedAnnealingListener interface {
+	OnUpdate(state State)
+}
+
+func NewSimulatedAnnealing(initialTemp, finalTemp, coolingRate float64, iterationsPerTemp int, listeners ...SimulatedAnnealingListener) *SimulatedAnnealing {
 	return &SimulatedAnnealing{
 		initialTemp:       initialTemp,
 		finalTemp:         finalTemp,
 		coolingRate:       coolingRate,
 		iterationsPerTemp: iterationsPerTemp,
+		listeners:         listeners,
 	}
 }
 
@@ -44,6 +50,9 @@ func (sa *SimulatedAnnealing) Optimize(initialState State) State {
 
 				if currentState.Energy() < bestState.Energy() {
 					bestState = currentState.Copy()
+					for _, listener := range sa.listeners {
+						listener.OnUpdate(bestState)
+					}
 				}
 			}
 		}
