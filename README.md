@@ -1,7 +1,7 @@
 # gointel
 [![build status](https://github.com/mtresnik/gointel/actions/workflows/go.yml/badge.svg)](https://github.com/mtresnik/gointel/actions/workflows/go.yml/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/mtresnik/gointel/blob/main/LICENSE)
-[![version](https://img.shields.io/badge/version-1.1.11-blue)](https://github.com/mtresnik/gomath/releases/tag/v1.1.11)
+[![version](https://img.shields.io/badge/version-1.1.12-blue)](https://github.com/mtresnik/gomath/releases/tag/v1.1.12)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-green.svg?style=flat-square)](https://makeapullrequest.com)
 <hr>
 
@@ -46,7 +46,7 @@ module mymodule
 
 go 1.23.3
 
-require github.com/mtresnik/gointel v1.1.11
+require github.com/mtresnik/gointel v1.1.12
 ```
 
 
